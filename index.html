@@ -136,6 +136,11 @@
             <input type="number" id="numFrames" value="6" min="1">
             <label for="addFrames"> frames duplicados al final</label>
         </div>
+        <!-- Nuevo control de BPM -->
+        <div class="config-row">
+            <label for="globalBPM" style="margin-right: 15px;">BPM Global:</label>
+            <input type="number" id="globalBPM" value="100" min="1" style="width: 60px;" onchange="actualizarBPM(this.value)">
+        </div>
         <br>
         <center>
             <button id="btnProcesar" disabled onclick="procesarArchivos()">Esperando archivos...</button>
@@ -165,6 +170,23 @@
         
         let pngSeleccionado = false;
         let xmlSeleccionado = false;
+        
+        // Variable Global para BPM
+        let bpmGlobal = 100;
+
+        function actualizarBPM(valor) {
+            bpmGlobal = parseFloat(valor) || 100;
+        }
+
+        function cambiarBeats(animId, valor) {
+            let anim = activeAnimations.find(a => a.id === animId);
+            let num = parseFloat(valor);
+            // Límite de beats a 3, como pediste
+            if (num > 3) num = 3; 
+            if (num < 0.1) num = 0.1;
+            anim.beats = num;
+            document.getElementById(`input-beats-${animId}`).value = num; // Actualiza la cajita si se pasó del límite
+        }
 
         // Verifica si ya se subieron ambos archivos
         function comprobarArchivos() {
@@ -270,7 +292,8 @@
                     }
                 }
 
-                activeAnimations.push({ id: idx, name: name, frames: processedFrames });
+                // Añadimos el valor inicial de beats (1)
+                activeAnimations.push({ id: idx, name: name, frames: processedFrames, beats: 1 });
                 idx++;
             }
             mostrarResultados();
@@ -291,8 +314,13 @@
                     if (f.frameHeight > maxH) maxH = f.frameHeight;
                 });
 
+                // Se añade el control numérico de Beats en cada tarjeta
                 card.innerHTML = `
                     <h3 class="anim-title">${anim.name}</h3>
+                    <div style="margin-bottom: 10px; color: #aaa; font-size: 14px;">
+                        <label>Beats:</label>
+                        <input type="number" id="input-beats-${anim.id}" value="${anim.beats}" min="0.1" max="3" step="0.1" onchange="cambiarBeats(${anim.id}, this.value)" style="width: 50px; text-align: center; border-radius: 5px; border: none; padding: 2px; margin-left: 5px; font-weight: bold;">
+                    </div>
                     <canvas id="canvas-${anim.id}"></canvas>
                 `;
                 contenedor.appendChild(card);
@@ -333,7 +361,13 @@
                 ctx.restore();
                 
                 frameActual = (frameActual + 1) % anim.frames.length;
-                currentTimers[animId] = setTimeout(loop, 1000 / 24); // 24 FPS
+                
+                // --- Cálculo de tiempo real (BPM y Beats) ---
+                const duracionSegundos = anim.beats * (60 / bpmGlobal);
+                let tiempoPorFrameMs = (duracionSegundos * 1000) / anim.frames.length;
+                if (tiempoPorFrameMs < 10) tiempoPorFrameMs = 10; // Límite para que no crashee si va muy rápido
+
+                currentTimers[animId] = setTimeout(loop, tiempoPorFrameMs);
             }
             loop();
         }
@@ -397,4 +431,5 @@
         }
     </script>
 </body>
-</html>
+    </html>
+    
