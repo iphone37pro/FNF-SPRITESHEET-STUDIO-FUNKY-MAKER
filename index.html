@@ -362,7 +362,7 @@
             loop();
         }
 
-        // Crear y descargar el archivo ZIP en una sola tira horizontal continua
+        // Crear y descargar el archivo ZIP separando cada animación en su propia tira horizontal (PNG + XML)
         async function descargarZip() {
             if (typeof JSZip === 'undefined') {
                 alert("Error: No se pudo cargar JSZip. Prueba desde el navegador (Chrome) y revisa tu internet.");
@@ -370,45 +370,39 @@
             }
 
             try {
-                let totalWidth = 0; 
-                let maxHeight = 0; 
+                const zip = new JSZip();
 
-                // Calcular el ancho total sumando todos los frames de todas las animaciones en una sola línea
-                activeAnimations.forEach(anim => {
+                for (const anim of activeAnimations) {
+                    let totalWidth = 0;
+                    let maxHeight = 0;
+
                     anim.frames.forEach(f => {
                         totalWidth += f.width;
                         if (f.height > maxHeight) maxHeight = f.height;
                     });
-                });
 
-                if (totalWidth === 0) {
-                    alert("No hay imágenes para exportar.");
-                    return;
-                }
+                    if (totalWidth === 0) continue;
 
-                const outCanvas = document.createElement('canvas');
-                outCanvas.width = totalWidth; 
-                outCanvas.height = maxHeight;
-                const outCtx = outCanvas.getContext('2d');
-                
-                let newXmlString = `<?xml version="1.0" encoding="utf-8"?>\n<TextureAtlas imagePath="spritesheet.png">\n`;
+                    const outCanvas = document.createElement('canvas');
+                    outCanvas.width = totalWidth;
+                    outCanvas.height = maxHeight;
+                    const outCtx = outCanvas.getContext('2d');
 
-                let currentX = 0;
-                activeAnimations.forEach(anim => {
+                    let xmlString = `<?xml version="1.0" encoding="utf-8"?>\n<TextureAtlas imagePath="${anim.name}.png">\n`;
+
+                    let currentX = 0;
                     anim.frames.forEach((f, idx) => {
-                        // Se dibujan todos seguidos en Y = 0 (una sola tira horizontal)
                         outCtx.drawImage(imageElement, f.x, f.y, f.width, f.height, currentX, 0, f.width, f.height);
                         const frameNum = String(idx).padStart(4, '0');
-                        newXmlString += `\t<SubTexture name="${anim.name}${frameNum}" x="${currentX}" y="0" width="${f.width}" height="${f.height}" frameX="${f.frameX}" frameY="${f.frameY}" frameWidth="${f.frameWidth}" frameHeight="${f.frameHeight}"/>\n`;
+                        xmlString += `\t<SubTexture name="${anim.name}${frameNum}" x="${currentX}" y="0" width="${f.width}" height="${f.height}" frameX="${f.frameX}" frameY="${f.frameY}" frameWidth="${f.frameWidth}" frameHeight="${f.frameHeight}"/>\n`;
                         currentX += f.width;
                     });
-                });
-                newXmlString += `</TextureAtlas>`;
+                    xmlString += `</TextureAtlas>`;
 
-                const blob = await new Promise(resolve => outCanvas.toBlob(resolve, 'image/png'));
-                const zip = new JSZip();
-                zip.file("spritesheet.png", blob);
-                zip.file("spritesheet.xml", newXmlString);
+                    const blob = await new Promise(resolve => outCanvas.toBlob(resolve, 'image/png'));
+                    zip.file(`${anim.name}.png`, blob);
+                    zip.file(`${anim.name}.xml`, xmlString);
+                }
 
                 const zipContent = await zip.generateAsync({type:"blob"});
                 const link = document.createElement('a'); 
