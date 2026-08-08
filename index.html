@@ -347,8 +347,10 @@
                 
                 let maxW = 0; let maxH = 0;
                 anim.frames.forEach(f => {
-                    if (f.frameWidth > maxW) maxW = f.frameWidth;
-                    if (f.frameHeight > maxH) maxH = f.frameHeight;
+                    const fw = f.frameWidth || f.width;
+                    const fh = f.frameHeight || f.height;
+                    if (fw > maxW) maxW = fw;
+                    if (fh > maxH) maxH = fh;
                 });
 
                 card.innerHTML = `
@@ -385,10 +387,10 @@
                 const frame = anim.frames[frameActual];
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                const logicalW = frame.frameWidth || frame.width;
-                const logicalH = frame.frameHeight || frame.height;
-                const dx = frame.frameX < 0 ? Math.abs(frame.frameX) : 0;
-                const dy = frame.frameY < 0 ? Math.abs(frame.frameY) : 0;
+                const fw = frame.frameWidth || frame.width;
+                const fh = frame.frameHeight || frame.height;
+                const fx = frame.frameX || 0;
+                const fy = frame.frameY || 0;
 
                 ctx.save();
                 ctx.scale(scale, scale);
@@ -396,12 +398,15 @@
                 ctx.rotate(rotacionGlobal * Math.PI / 180);
                 ctx.globalAlpha = opacidadGlobal;
 
-                ctx.drawImage(imageElement, frame.x, frame.y, frame.width, frame.height, -logicalW/2 + dx, -logicalH/2 + dy, frame.width, frame.height);
+                const dx = -maxW / 2 + (maxW - fw) / 2 + fx;
+                const dy = -maxH / 2 + (maxH - fh) / 2 + fy;
+
+                ctx.drawImage(imageElement, frame.x, frame.y, frame.width, frame.height, dx, dy, frame.width, frame.height);
                 
                 if (usarTinte) {
                     ctx.globalCompositeOperation = 'source-atop';
                     ctx.fillStyle = colorGlobal;
-                    ctx.fillRect(-logicalW/2 + dx, -logicalH/2 + dy, frame.width, frame.height);
+                    ctx.fillRect(dx, dy, frame.width, frame.height);
                     ctx.globalCompositeOperation = 'source-over';
                 }
 
@@ -418,7 +423,7 @@
             loop();
         }
 
-        // Crear y descargar el archivo ZIP con rotación, opacidad y tinte aplicados
+        // Crear y descargar el archivo ZIP con alineación uniforme garantizada
         async function descargarZip() {
             if (typeof JSZip === 'undefined') {
                 alert("Error: No se pudo cargar JSZip. Prueba desde el navegador (Chrome) y revisa tu internet.");
@@ -429,39 +434,48 @@
                 const zip = new JSZip();
 
                 for (const anim of activeAnimations) {
-                    let totalWidth = 0;
-                    let maxHeight = 0;
+                    let maxW = 0;
+                    let maxH = 0;
 
                     anim.frames.forEach(f => {
-                        totalWidth += f.width;
-                        if (f.height > maxHeight) maxHeight = f.height;
+                        const fw = f.frameWidth || f.width;
+                        const fh = f.frameHeight || f.height;
+                        if (fw > maxW) maxW = fw;
+                        if (fh > maxH) maxH = fh;
                     });
 
-                    if (totalWidth === 0) continue;
+                    if (anim.frames.length === 0 || maxW === 0 || maxH === 0) continue;
 
                     const outCanvas = document.createElement('canvas');
-                    outCanvas.width = totalWidth;
-                    outCanvas.height = maxHeight;
+                    outCanvas.width = maxW * anim.frames.length;
+                    outCanvas.height = maxH;
                     const outCtx = outCanvas.getContext('2d');
 
-                    let currentX = 0;
-                    anim.frames.forEach((f) => {
+                    anim.frames.forEach((f, i) => {
+                        const fw = f.frameWidth || f.width;
+                        const fh = f.frameHeight || f.height;
+                        const fx = f.frameX || 0;
+                        const fy = f.frameY || 0;
+                        const slotX = i * maxW;
+
                         outCtx.save();
-                        outCtx.translate(currentX + f.width / 2, maxHeight / 2);
+                        outCtx.translate(slotX + maxW / 2, maxH / 2);
                         outCtx.rotate(rotacionGlobal * Math.PI / 180);
                         outCtx.globalAlpha = opacidadGlobal;
 
-                        outCtx.drawImage(imageElement, f.x, f.y, f.width, f.height, -f.width / 2, -f.height / 2, f.width, f.height);
+                        const dx = -maxW / 2 + (maxW - fw) / 2 + fx;
+                        const dy = -maxH / 2 + (maxH - fh) / 2 + fy;
+
+                        outCtx.drawImage(imageElement, f.x, f.y, f.width, f.height, dx, dy, f.width, f.height);
                         
                         if (usarTinte) {
                             outCtx.globalCompositeOperation = 'source-atop';
                             outCtx.fillStyle = colorGlobal;
-                            outCtx.fillRect(-f.width / 2, -f.height / 2, f.width, f.height);
+                            outCtx.fillRect(dx, dy, f.width, f.height);
                             outCtx.globalCompositeOperation = 'source-over';
                         }
 
                         outCtx.restore();
-                        currentX += f.width;
                     });
 
                     const blob = await new Promise(resolve => outCanvas.toBlob(resolve, 'image/png'));
