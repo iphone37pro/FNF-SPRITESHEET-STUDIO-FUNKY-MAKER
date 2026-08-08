@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FNF Spritesheet Studio</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- JSZip -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #120c24;
+            color: #ffffff;
+            touch-action: manipulation;
+        }
+
+        .card-dark {
+            background-color: #1a1528;
+            border: 1px solid #2a203f;
+        }
+
+        .btn-red {
+            background-color: #d9485b;
+            color: white;
+            transition: all 0.2s ease;
+        }
+        .btn-red:hover {
+            background-color: #f25c70;
+            transform: translateY(-1px);
+        }
+
+        .btn-gray-dark {
+            background-color: #4b4453;
+            color: #a097b0;
+            transition: all 0.2s ease;
+        }
+        .btn-gray-dark:hover:not(:disabled) {
+            background-color: #5c5466;
+            color: #fff;
+        }
+        .btn-gray-dark:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .config-checkbox {
+            appearance: none;
+            width: 1.1rem;
+            height: 1.1rem;
+            background-color: #fff;
+            border-radius: 0.2rem;
+            cursor: pointer;
+            position: relative;
+        }
+        .config-checkbox:checked {
+            background-color: #fff;
+        }
+        .config-checkbox:checked::after {
+            content: '✔';
+            position: absolute;
+            color: #000;
+            font-size: 0.85rem;
+            font-weight: bold;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .toggle-btn {
+            background-color: #261f36;
+            color: #a097b0;
+        }
+        .toggle-btn.active {
+            background-color: #00d2bd;
+            color: #000;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #120c24; }
+        ::-webkit-scrollbar-thumb { background: #3d2866; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d9485b; }
+
+        .filmstrip-item.selected {
+            border-color: #00d2bd !important;
+            opacity: 1 !important;
+            transform: scale(1.05);
+        }
+
+        .rotation-wheel-container {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #261f36, #3d2866, #261f36);
+            border: 3px solid #d9485b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            touch-action: none;
+        }
+        .rotation-handle {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            top: 6px;
+            box-shadow: 0 0 6px #d9485b;
+        }
+
+        .color-picker-box {
+            position: relative;
+            width: 100%;
+            height: 160px;
+            background: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, #ff0000);
+            border-radius: 8px;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        .color-picker-thumb {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 4px rgba(0,0,0,0.9);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <header class="bg-[#1a102e] border-b border-[#3d2866] sticky top-0 z-50">
+        <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i data-lucide="layers" class="text-red-500 w-6 h-6"></i>
+                <h1 class="text-xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-pink-400">
+                    FNF Spritesheet Studio
+                </h1>
+            </div>
+            <nav class="flex items-center gap-4 text-sm font-semibold text-gray-300 hidden sm:flex">
+                <button class="hover:text-red-400 flex items-center gap-1"><i data-lucide="home" class="w-4 h-4"></i> Inicio</button>
+                <button class="hover:text-red-400 flex items-center gap-1"><i data-lucide="package" class="w-4 h-4"></i> Herramientas</button>
+            </nav>
+        </div>
+        <div class="bg-[#2a1a4a] text-center py-1 text-xs font-medium text-pink-300 flex items-center justify-center gap-1">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Creador Independiente de Sprites para Mods
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-3xl w-full mx-auto p-4 space-y-6">
+
+        <div class="card-dark rounded-xl p-4 shadow-lg space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="border-2 border-dashed border-red-500/40 hover:border-red-500 rounded-xl p-4 text-center bg-[#151020] flex flex-col items-center justify-center min-h-[120px] cursor-pointer" onclick="document.getElementById('pngInput').click()">
+                    <input type="file" id="pngInput" accept=".png" class="hidden" onchange="handlePNG(event)">
+                    <div id="pngStateEmpty" class="flex flex-col items-center">
+                        <span class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">PNG</span>
+                        <div class="btn-red text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-1.5"><i data-lucide="upload" class="w-4 h-4"></i> Seleccionar PNG</div>
+                    </div>
+                    <div id="pngStateLoaded" class="hidden flex-col items-center w-full">
+                        <div class="w-full bg-emerald-500/20 text-emerald-400 font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 border border-emerald-500/40 text-xs truncate">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i> <span id="pngFileName">archivo.png</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-2 border-dashed border-red-500/40 hover:border-red-500 rounded-xl p-4 text-center bg-[#151020] flex flex-col items-center justify-center min-h-[120px] cursor-pointer" onclick="document.getElementById('xmlInput').click()">
+                    <input type="file" id="xmlInput" accept=".xml" class="hidden" onchange="handleXML(event)">
+                    <div id="xmlStateEmpty" class="flex flex-col items-center">
+                        <span class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">XML</span>
+                        <div class="btn-red text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-1.5"><i data-lucide="upload" class="w-4 h-4"></i> Seleccionar XML</div>
+                    </div>
+                    <div id="xmlStateLoaded" class="hidden flex-col items-center w-full">
+                        <div class="w-full bg-emerald-500/20 text-emerald-400 font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 border border-emerald-500/40 text-xs truncate">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i> <span id="xmlFileName">archivo.xml</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="bg-[#d9485b] rounded-t-xl px-4 py-2">
+                <h2 class="font-extrabold text-white text-lg">Configuración</h2>
+            </div>
+            <div class="bg-[#1a1528] rounded-b-xl border-x border-b border-[#2a203f] p-4 space-y-4">
+                
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="cfgRemoveDups" class="config-checkbox">
+                    <span class="font-bold text-sm text-gray-200">Eliminar frames duplicados</span>
+                </label>
+
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="cfgAddFrames" class="config-checkbox">
+                        <span class="font-bold text-sm text-gray-200">Añadir</span>
+                    </label>
+                    <input type="number" id="cfgAddCount" value="6" class="w-12 bg-transparent border-2 border-[#d9485b] rounded px-1 text-center font-bold text-white text-sm focus:outline-none">
+                    <span class="font-bold text-sm text-gray-200">frames duplicados al final</span>
+                </div>
+
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" id="cfgWebP" class="config-checkbox">
+                    <span class="font-bold text-sm text-gray-200">Exportar como WebP animado</span>
+                </label>
+
+                <button id="generateBtn" disabled onclick="processFiles()" class="w-full btn-gray-dark py-3.5 rounded-lg font-extrabold text-lg tracking-wide shadow-md mt-4">
+                    Procesar Proyecto
+                </button>
+            </div>
+        </div>
+
+        <div id="resultsSection" class="space-y-6 hidden">
+            <div class="bg-[#d9485b] rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-lg">
+                <div class="flex items-center gap-2 bg-[#2a121e]/40 px-3 py-1.5 rounded-lg border border-white/20">
+                    <span class="text-sm font-bold text-white">BPM:</span>
+                    <input type="number" id="globalBPM" value="100" onchange="updateGlobalBPM(this.value)" class="w-16 bg-transparent text-white font-black text-lg text-center focus:outline-none">
+                </div>
+                <button onclick="downloadZip()" class="bg-white text-[#d9485b] hover:bg-gray-100 text-sm font-extrabold py-2 px-6 rounded-lg flex items-center gap-2 shadow">
+                    <i data-lucide="download" class="w-4 h-4"></i> Descargar ZIP
+                </button>
+            </div>
+
+            <div id="animationsList" class="space-y-6"></div>
+        </div>
+
+    </main>
+
+    <!-- Modal Selector de Color Avanzado -->
+    <div id="colorModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#1f1830] border border-[#3d2866] rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-[#3d2866] pb-3">
+                <h3 class="font-extrabold text-base text-white">Color del Sprite</h3>
+                <button onclick="closeColorModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div id="colorPickerArea" class="color-picker-box" onpointerdown="startColorDrag(event)">
+                <div id="colorPickerThumb" class="color-picker-thumb" style="top:50%; left:50%;"></div>
+            </div>
+
+            <input type="range" id="hueSlider" min="0" max="360" value="0" oninput="updateHue(this.value)" class="w-full h-4 rounded-lg cursor-pointer" style="background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);">
+
+            <div class="flex items-center gap-3 bg-[#151020] p-2.5 rounded-xl border border-[#3d2866]">
+                <div id="colorPreviewBox" class="w-10 h-10 rounded-lg border border-white/20 shadow"></div>
+                <div class="flex-1 flex flex-col">
+                    <span class="text-[10px] text-gray-400 uppercase font-bold">Código HEX</span>
+                    <input type="text" id="hexInput" value="#FFFFFF" onchange="updateFromHex(this.value)" class="bg-transparent font-mono text-sm font-bold text-white focus:outline-none">
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="resetSpriteColor()" class="w-1/2 bg-[#2a203f] hover:bg-[#3d2866] text-white py-2.5 rounded-xl font-bold text-sm shadow">Restaurar</button>
+                <button onclick="applyColorModal()" class="w-1/2 btn-red py-2.5 rounded-xl font-bold text-sm shadow">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        let imageElement = new Image();
+        let xmlDocument = null;
+        let activeAnimations = []; 
+        let currentTimers = {}; 
+        let globalBPM = 100;
+        let currentEditingAnimId = null;
+
+        let pickerHue = 0;
+        let pickerSat = 100;
+        let pickerLight = 50;
+
+        function handlePNG(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imageElement.src = e.target.result;
+                imageElement.onload = () => {
+                    document.getElementById('pngFileName').innerText = file.name;
+                    document.getElementById('pngStateEmpty').classList.add('hidden');
+                    document.getElementById('pngStateLoaded').classList.remove('hidden');
+                    document.getElementById('pngStateLoaded').classList.add('flex');
+                    checkReady();
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleXML(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                xmlDocument = new DOMParser().parseFromString(e.target.result, "text/xml");
+                document.getElementById('xmlFileName').innerText = file.name;
+                document.getElementById('xmlStateEmpty').classList.add('hidden');
+                document.getElementById('xmlStateLoaded').classList.remove('hidden');
+                document.getElementById('xmlStateLoaded').classList.add('flex');
+                checkReady();
+            };
+            reader.readAsText(file);
+        }
+
+        function checkReady() {
+            if (imageElement.src && xmlDocument) {
+                const btn = document.getElementById('generateBtn');
+                btn.disabled = false;
+                btn.className = "w-full btn-red py-3.5 rounded-lg font-extrabold text-lg tracking-wide shadow-md mt-4";
+            }
+        }
+
+        function updateGlobalBPM(val) {
+            globalBPM = parseFloat(val);
+            if(globalBPM < 1) { globalBPM = 1; document.getElementById('globalBPM').value = 1; }
+        }
+
+        function processFiles() {
+            activeAnimations = [];
+            Object.values(currentTimers).forEach(clearTimeout);
+            currentTimers = {};
+
+            const removeDups = document.getElementById('cfgRemoveDups').checked;
+            const addFrames = document.getElementById('cfgAddFrames').checked;
+            const addCount = parseInt(document.getElementById('cfgAddCount').value) || 0;
+
+            const subTextures = xmlDocument.getElementsByTagName("SubTexture");
+            if (subTextures.length === 0) return alert("Formato XML no válido.");
+
+            let tempMap = new Map();
+            for (let st of subTextures) {
+                const rawName = st.getAttribute("name");
+                let baseName = rawName.match(/^(.*?)(\d+)$/) ? rawName.match(/^(.*?)(\d+)$/)[1].trim() : rawName;
+
+                const frame = {
+                    name: rawName,
+                    x: parseInt(st.getAttribute("x")) || 0,
+                    y: parseInt(st.getAttribute("y")) || 0,
+                    width: parseInt(st.getAttribute("width")) || 0,
+                    height: parseInt(st.getAttribute("height")) || 0,
+                    frameX: parseInt(st.getAttribute("frameX")) || 0,
+                    frameY: parseInt(st.getAttribute("frameY")) || 0,
+                    frameWidth: parseInt(st.getAttribute("frameWidth")) || parseInt(st.getAttribute("width")),
+                    frameHeight: parseInt(st.getAttribute("frameHeight")) || parseInt(st.getAttribute("height"))
+                };
+
+                if (!tempMap.has(baseName)) tempMap.set(baseName, []);
+                tempMap.get(baseName).push(frame);
+            }
+
+            let idx = 0;
+            for (const [name, rawFrames] of tempMap.entries()) {
+                let processedFrames = [...rawFrames];
+
+                if (removeDups) {
+                    let unique = [];
+                    let last = null;
+                    for(let f of processedFrames) {
+                        if(!last || last.x !== f.x || last.y !== f.y || last.width !== f.width || last.height !== f.height) {
+                            unique.push(f);
+                            last = f;
+                        }
+                    }
+                    processedFrames = unique;
+                }
+
+                if (addFrames && addCount > 0 && processedFrames.length > 0) {
+                    const lastF = processedFrames[processedFrames.length - 1];
+                    for(let i = 0; i < addCount; i++) {
+                        processedFrames.push(JSON.parse(JSON.stringify(lastF)));
+                    }
+                }
+
+                activeAnimations.push({
+                    id: idx,
+                    name: name,
+                    originalFrames: JSON.parse(JSON.stringify(processedFrames)),
+                    frames: processedFrames,
+                    mode: 'preview',
+                    selectedIdx: 0,
+                    beats: 1,
+                    globalRotation: 0,
+                    spriteColor: '#FFFFFF'
+                });
+                idx++;
+            }
+
+            renderAnimationsUI();
+        }
+
+        function renderAnimationsUI() {
+            const container = document.getElementById('animationsList');
+            container.innerHTML = '';
+
+            activeAnimations.forEach((anim) => {
+                const card = document.createElement('div');
+                card.className = "card-dark rounded-xl p-4 shadow-lg space-y-4";
+                
+                let maxW = 0; let maxH = 0;
+                anim.frames.forEach(f => {
+                    if (f.frameWidth > maxW) maxW = f.frameWidth;
+                    if (f.frameHeight > maxH) maxH = f.frameHeight;
+                });
+
+                card.innerHTML = `
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="font-extrabold text-base text-white uppercase tracking-wider">${anim.name}</h3>
+                        
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2 bg-[#181324] px-2.5 py-1.5 rounded-lg border border-[#2a203f] cursor-pointer" onclick="openColorModal(${anim.id})">
+                                <span class="text-[11px] font-bold text-gray-400">Color Sprite:</span>
+                                <div id="color-btn-preview-${anim.id}" class="w-5 h-5 rounded border border-white/20 shadow" style="background-color: ${anim.spriteColor};"></div>
+                            </div>
+
+                            <div class="flex bg-[#261f36] rounded-lg overflow
