@@ -4,341 +4,227 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FNF Spritesheet Studio</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- JSZip -->
+    <!-- Librería necesaria para crear el archivo ZIP -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+        body { 
+            background-color: #1a1a24; 
+            color: white; 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            margin: 0;
+        }
+        h1 { color: #ff3366; margin-bottom: 5px; font-size: 24px; }
+        p.subtitle { color: #aaa; margin-bottom: 20px; font-size: 14px; }
         
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #120c24;
-            color: #ffffff;
-            touch-action: manipulation;
+        .card { 
+            background-color: #0b0b13; 
+            border: 2px dashed #ff3366; 
+            border-radius: 10px; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+        }
+        
+        .config-card { 
+            background-color: #7d1c44;
+            border-radius: 10px; 
+            padding: 20px; 
+            text-align: left; 
+            margin-bottom: 20px;
+        }
+        .config-card h2 { 
+            margin-top: 0; 
+            text-align: center;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+            padding-bottom: 10px;
+        }
+        
+        button { 
+            background-color: #ff3366; 
+            color: white; 
+            border: none; 
+            padding: 15px 20px; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            width: 90%; 
+            cursor: pointer; 
+            transition: 0.3s;
+            margin-top: 5px;
+        }
+        button:active { transform: scale(0.95); }
+        
+        .btn-success { background-color: #4CAF50 !important; }
+        #btnProcesar:disabled { background-color: #555; color: #888; cursor: not-allowed; }
+        #btnProcesar:not(:disabled) { background-color: #4CAF50; }
+
+        input[type="file"] { display: none; }
+        
+        .config-row { 
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 15px; 
+            font-size: 15px;
+        }
+        .config-row input[type="checkbox"] { 
+            transform: scale(1.5); 
+            margin-right: 15px; 
+        }
+        .config-row input[type="number"] { 
+            width: 40px; 
+            text-align: center; 
+            margin: 0 10px; 
+            padding: 5px; 
+            border-radius: 5px; 
+            border: none; 
+            font-weight: bold; 
         }
 
-        .card-dark {
-            background-color: #1a1528;
-            border: 1px solid #2a203f;
+        /* Estilos para las animaciones y resultados */
+        .anim-card {
+            background-color: #0b0b13;
+            border: 1px solid #ff3366;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: center;
         }
-
-        .btn-red {
-            background-color: #d9485b;
+        .anim-title {
             color: white;
-            transition: all 0.2s ease;
+            text-transform: uppercase;
+            margin-top: 0;
+            font-size: 14px;
         }
-        .btn-red:hover {
-            background-color: #f25c70;
-            transform: translateY(-1px);
-        }
-
-        .btn-gray-dark {
-            background-color: #4b4453;
-            color: #a097b0;
-            transition: all 0.2s ease;
-        }
-        .btn-gray-dark:hover:not(:disabled) {
-            background-color: #5c5466;
-            color: #fff;
-        }
-        .btn-gray-dark:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .config-checkbox {
-            appearance: none;
-            width: 1.1rem;
-            height: 1.1rem;
-            background-color: #fff;
-            border-radius: 0.2rem;
-            cursor: pointer;
-            position: relative;
-        }
-        .config-checkbox:checked {
-            background-color: #fff;
-        }
-        .config-checkbox:checked::after {
-            content: '✔';
-            position: absolute;
-            color: #000;
-            font-size: 0.85rem;
-            font-weight: bold;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .toggle-btn {
-            background-color: #261f36;
-            color: #a097b0;
-        }
-        .toggle-btn.active {
-            background-color: #00d2bd;
-            color: #000;
-        }
-
         canvas {
-            image-rendering: pixelated;
-        }
-
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #120c24; }
-        ::-webkit-scrollbar-thumb { background: #3d2866; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #d9485b; }
-
-        .filmstrip-item.selected {
-            border-color: #00d2bd !important;
-            opacity: 1 !important;
-            transform: scale(1.05);
-        }
-
-        .rotation-wheel-container {
-            position: relative;
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
-            background: conic-gradient(from 0deg, #261f36, #3d2866, #261f36);
-            border: 3px solid #d9485b;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            touch-action: none;
-        }
-        .rotation-handle {
-            position: absolute;
-            width: 14px;
-            height: 14px;
-            background-color: #ffffff;
-            border-radius: 50%;
-            top: 6px;
-            box-shadow: 0 0 6px #d9485b;
-        }
-
-        .color-picker-box {
-            position: relative;
-            width: 100%;
-            height: 160px;
-            background: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, #ff0000);
-            border-radius: 8px;
-            cursor: crosshair;
-            touch-action: none;
-        }
-        .color-picker-thumb {
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            border: 3px solid #fff;
-            border-radius: 50%;
-            box-shadow: 0 0 4px rgba(0,0,0,0.9);
-            transform: translate(-50%, -50%);
-            pointer-events: none;
+            background-color: #120c24;
+            border: 1px solid #333;
+            max-width: 100%;
+            border-radius: 5px;
+            margin-top: 10px;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body>
 
-    <header class="bg-[#1a102e] border-b border-[#3d2866] sticky top-0 z-50">
-        <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <i data-lucide="layers" class="text-red-500 w-6 h-6"></i>
-                <h1 class="text-xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-pink-400">
-                    FNF Spritesheet Studio
-                </h1>
-            </div>
-            <nav class="flex items-center gap-4 text-sm font-semibold text-gray-300 hidden sm:flex">
-                <button class="hover:text-red-400 flex items-center gap-1"><i data-lucide="home" class="w-4 h-4"></i> Inicio</button>
-                <button class="hover:text-red-400 flex items-center gap-1"><i data-lucide="package" class="w-4 h-4"></i> Herramientas</button>
-            </nav>
+    <h1>FNF Spritesheet Studio</h1>
+    <p class="subtitle">Creador Independiente de Sprites para Mods</p>
+
+    <!-- Tarjetas de subida -->
+    <div class="card">
+        <h3 style="margin-top:0;">PNG</h3>
+        <button id="btnPng" onclick="document.getElementById('pngInput').click()">Seleccionar PNG</button>
+        <input type="file" id="pngInput" accept="image/png">
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0;">XML</h3>
+        <button id="btnXml" onclick="document.getElementById('xmlInput').click()">Seleccionar XML</button>
+        <input type="file" id="xmlInput" accept=".xml">
+    </div>
+
+    <!-- Configuración -->
+    <div class="config-card">
+        <h2>Configuración</h2>
+        <div class="config-row">
+            <input type="checkbox" id="eliminarDuplicados">
+            <label for="eliminarDuplicados">Eliminar frames duplicados</label>
         </div>
-        <div class="bg-[#2a1a4a] text-center py-1 text-xs font-medium text-pink-300 flex items-center justify-center gap-1">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Creador Independiente de Sprites para Mods
+        <div class="config-row">
+            <input type="checkbox" id="addFrames">
+            <label for="addFrames">Añadir </label>
+            <input type="number" id="numFrames" value="6" min="1">
+            <label for="addFrames"> frames duplicados al final</label>
         </div>
-    </header>
+        <br>
+        <center>
+            <button id="btnProcesar" disabled onclick="procesarArchivos()">Esperando archivos...</button>
+        </center>
+    </div>
 
-    <main class="flex-1 max-w-3xl w-full mx-auto p-4 space-y-6">
-
-        <div class="card-dark rounded-xl p-4 shadow-lg space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="border-2 border-dashed border-red-500/40 hover:border-red-500 rounded-xl p-4 text-center bg-[#151020] flex flex-col items-center justify-center min-h-[120px] cursor-pointer" onclick="document.getElementById('pngInput').click()">
-                    <input type="file" id="pngInput" accept=".png" class="hidden" onchange="handlePNG(event)">
-                    <div id="pngStateEmpty" class="flex flex-col items-center">
-                        <span class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">PNG</span>
-                        <div class="btn-red text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-1.5"><i data-lucide="upload" class="w-4 h-4"></i> Seleccionar PNG</div>
-                    </div>
-                    <div id="pngStateLoaded" class="hidden flex-col items-center w-full">
-                        <div class="w-full bg-emerald-500/20 text-emerald-400 font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 border border-emerald-500/40 text-xs truncate">
-                            <i data-lucide="check-circle" class="w-4 h-4"></i> <span id="pngFileName">archivo.png</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="border-2 border-dashed border-red-500/40 hover:border-red-500 rounded-xl p-4 text-center bg-[#151020] flex flex-col items-center justify-center min-h-[120px] cursor-pointer" onclick="document.getElementById('xmlInput').click()">
-                    <input type="file" id="xmlInput" accept=".xml" class="hidden" onchange="handleXML(event)">
-                    <div id="xmlStateEmpty" class="flex flex-col items-center">
-                        <span class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">XML</span>
-                        <div class="btn-red text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-1.5"><i data-lucide="upload" class="w-4 h-4"></i> Seleccionar XML</div>
-                    </div>
-                    <div id="xmlStateLoaded" class="hidden flex-col items-center w-full">
-                        <div class="w-full bg-emerald-500/20 text-emerald-400 font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 border border-emerald-500/40 text-xs truncate">
-                            <i data-lucide="check-circle" class="w-4 h-4"></i> <span id="xmlFileName">archivo.xml</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Resultados (Ocultos hasta que se procese) -->
+    <div id="resultados" style="display: none;">
+        <div class="config-card" style="background-color: #4CAF50; text-align: center;">
+            <h3 style="margin-top:0; color: white;">¡Sprites Generados!</h3>
+            <button onclick="descargarZip()" style="background-color: white; color: #4CAF50; width: auto; padding: 15px 30px;">⬇️ Descargar ZIP</button>
         </div>
-
-        <div>
-            <div class="bg-[#d9485b] rounded-t-xl px-4 py-2">
-                <h2 class="font-extrabold text-white text-lg">Configuración</h2>
-            </div>
-            <div class="bg-[#1a1528] rounded-b-xl border-x border-b border-[#2a203f] p-4 space-y-4">
-                
-                <label class="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" id="cfgRemoveDups" class="config-checkbox">
-                    <span class="font-bold text-sm text-gray-200">Eliminar frames duplicados</span>
-                </label>
-
-                <div class="flex items-center gap-3">
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" id="cfgAddFrames" class="config-checkbox">
-                        <span class="font-bold text-sm text-gray-200">Añadir</span>
-                    </label>
-                    <input type="number" id="cfgAddCount" value="6" class="w-12 bg-transparent border-2 border-[#d9485b] rounded px-1 text-center font-bold text-white text-sm focus:outline-none">
-                    <span class="font-bold text-sm text-gray-200">frames duplicados al final</span>
-                </div>
-
-                <label class="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" id="cfgWebP" class="config-checkbox">
-                    <span class="font-bold text-sm text-gray-200">Exportar como WebP animado</span>
-                </label>
-
-                <button id="generateBtn" disabled onclick="processFiles()" class="w-full btn-gray-dark py-3.5 rounded-lg font-extrabold text-lg tracking-wide shadow-md mt-4">
-                    Procesar Proyecto
-                </button>
-            </div>
-        </div>
-
-        <div id="resultsSection" class="space-y-6 hidden">
-            <div class="bg-[#d9485b] rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-lg">
-                <div class="flex items-center gap-2 bg-[#2a121e]/40 px-3 py-1.5 rounded-lg border border-white/20">
-                    <span class="text-sm font-bold text-white">BPM:</span>
-                    <input type="number" id="globalBPM" value="100" onchange="updateGlobalBPM(this.value)" class="w-16 bg-transparent text-white font-black text-lg text-center focus:outline-none">
-                </div>
-                <button onclick="downloadZip()" class="bg-white text-[#d9485b] hover:bg-gray-100 text-sm font-extrabold py-2 px-6 rounded-lg flex items-center gap-2 shadow">
-                    <i data-lucide="download" class="w-4 h-4"></i> Descargar ZIP
-                </button>
-            </div>
-
-            <div id="animationsList" class="space-y-6"></div>
-        </div>
-
-    </main>
-
-    <!-- Modal Selector de Color Avanzado -->
-    <div id="colorModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-[#1f1830] border border-[#3d2866] rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-[#3d2866] pb-3">
-                <h3 class="font-extrabold text-base text-white">Color del Sprite</h3>
-                <button onclick="closeColorModal()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-
-            <div id="colorPickerArea" class="color-picker-box" onpointerdown="startColorDrag(event)">
-                <div id="colorPickerThumb" class="color-picker-thumb" style="top:50%; left:50%;"></div>
-            </div>
-
-            <input type="range" id="hueSlider" min="0" max="360" value="0" oninput="updateHue(this.value)" class="w-full h-4 rounded-lg cursor-pointer" style="background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);">
-
-            <div class="flex items-center gap-3 bg-[#151020] p-2.5 rounded-xl border border-[#3d2866]">
-                <div id="colorPreviewBox" class="w-10 h-10 rounded-lg border border-white/20 shadow"></div>
-                <div class="flex-1 flex flex-col">
-                    <span class="text-[10px] text-gray-400 uppercase font-bold">Código HEX</span>
-                    <input type="text" id="hexInput" value="#FFFFFF" onchange="updateFromHex(this.value)" class="bg-transparent font-mono text-sm font-bold text-white focus:outline-none">
-                </div>
-            </div>
-
-            <div class="flex gap-2">
-                <button onclick="resetSpriteColor()" class="w-1/2 bg-[#2a203f] hover:bg-[#3d2866] text-white py-2.5 rounded-xl font-bold text-sm shadow">Restaurar</button>
-                <button onclick="applyColorModal()" class="w-1/2 btn-red py-2.5 rounded-xl font-bold text-sm shadow">Aceptar</button>
-            </div>
-        </div>
+        <div id="listaAnimaciones"></div>
     </div>
 
     <script>
-        lucide.createIcons();
+        const pngInput = document.getElementById('pngInput');
+        const xmlInput = document.getElementById('xmlInput');
+        const btnPng = document.getElementById('btnPng');
+        const btnXml = document.getElementById('btnXml');
+        const btnProcesar = document.getElementById('btnProcesar');
 
         let imageElement = new Image();
         let xmlDocument = null;
-        let activeAnimations = []; 
-        let currentTimers = {}; 
-        let globalBPM = 100;
-        let currentEditingAnimId = null;
+        let activeAnimations = [];
+        let currentTimers = {};
+        
+        let pngSeleccionado = false;
+        let xmlSeleccionado = false;
 
-        let pickerHue = 0;
-        let pickerSat = 100;
-        let pickerLight = 50;
-
-        function handlePNG(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                imageElement.src = e.target.result;
-                imageElement.onload = () => {
-                    document.getElementById('pngFileName').innerText = file.name;
-                    document.getElementById('pngStateEmpty').classList.add('hidden');
-                    document.getElementById('pngStateLoaded').classList.remove('hidden');
-                    document.getElementById('pngStateLoaded').classList.add('flex');
-                    checkReady();
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function handleXML(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                xmlDocument = new DOMParser().parseFromString(e.target.result, "text/xml");
-                document.getElementById('xmlFileName').innerText = file.name;
-                document.getElementById('xmlStateEmpty').classList.add('hidden');
-                document.getElementById('xmlStateLoaded').classList.remove('hidden');
-                document.getElementById('xmlStateLoaded').classList.add('flex');
-                checkReady();
-            };
-            reader.readAsText(file);
-        }
-
-        function checkReady() {
-            if (imageElement.src && xmlDocument) {
-                const btn = document.getElementById('generateBtn');
-                btn.disabled = false;
-                btn.className = "w-full btn-red py-3.5 rounded-lg font-extrabold text-lg tracking-wide shadow-md mt-4";
+        // Verifica si ya se subieron ambos archivos
+        function comprobarArchivos() {
+            if (pngSeleccionado && xmlSeleccionado) {
+                btnProcesar.disabled = false;
+                btnProcesar.innerText = "Procesar Proyecto";
             }
         }
 
-        function updateGlobalBPM(val) {
-            globalBPM = parseFloat(val);
-            if(globalBPM < 1) { globalBPM = 1; document.getElementById('globalBPM').value = 1; }
-        }
+        // Leer el PNG
+        pngInput.addEventListener('change', function(evento) {
+            if (evento.target.files.length > 0) {
+                const file = evento.target.files[0];
+                btnPng.textContent = "✔️ " + file.name;
+                btnPng.classList.add('btn-success');
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imageElement.onload = () => {
+                        pngSeleccionado = true;
+                        comprobarArchivos();
+                    };
+                    imageElement.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
 
-        function processFiles() {
+        // Leer el XML
+        xmlInput.addEventListener('change', function(evento) {
+            if (evento.target.files.length > 0) {
+                const file = evento.target.files[0];
+                btnXml.textContent = "✔️ " + file.name;
+                btnXml.classList.add('btn-success');
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    xmlDocument = new DOMParser().parseFromString(e.target.result, "text/xml");
+                    xmlSeleccionado = true;
+                    comprobarArchivos();
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // Procesar todo cuando se pulsa el botón verde
+        function procesarArchivos() {
             activeAnimations = [];
             Object.values(currentTimers).forEach(clearTimeout);
             currentTimers = {};
 
-            const removeDups = document.getElementById('cfgRemoveDups').checked;
-            const addFrames = document.getElementById('cfgAddFrames').checked;
-            const addCount = parseInt(document.getElementById('cfgAddCount').value) || 0;
+            const removeDups = document.getElementById('eliminarDuplicados').checked;
+            const addFrames = document.getElementById('addFrames').checked;
+            const addCount = parseInt(document.getElementById('numFrames').value) || 0;
 
             const subTextures = xmlDocument.getElementsByTagName("SubTexture");
-            if (subTextures.length === 0) return alert("Formato XML no válido.");
+            if (subTextures.length === 0) {
+                alert("Error: El XML no tiene formato de FNF (Faltan las SubTextures).");
+                return;
+            }
 
             let tempMap = new Map();
             for (let st of subTextures) {
@@ -384,30 +270,20 @@
                     }
                 }
 
-                activeAnimations.push({
-                    id: idx,
-                    name: name,
-                    originalFrames: JSON.parse(JSON.stringify(processedFrames)),
-                    frames: processedFrames,
-                    mode: 'preview',
-                    selectedIdx: 0,
-                    beats: 1,
-                    globalRotation: 0,
-                    spriteColor: '#FFFFFF'
-                });
+                activeAnimations.push({ id: idx, name: name, frames: processedFrames });
                 idx++;
             }
-
-            renderAnimationsUI();
+            mostrarResultados();
         }
 
-        function renderAnimationsUI() {
-            const container = document.getElementById('animationsList');
-            container.innerHTML = '';
+        // Mostrar los Canvas con las animaciones
+        function mostrarResultados() {
+            const contenedor = document.getElementById('listaAnimaciones');
+            contenedor.innerHTML = '';
 
             activeAnimations.forEach((anim) => {
                 const card = document.createElement('div');
-                card.className = "card-dark rounded-xl p-4 shadow-lg space-y-4";
+                card.className = "anim-card";
                 
                 let maxW = 0; let maxH = 0;
                 anim.frames.forEach(f => {
@@ -416,13 +292,109 @@
                 });
 
                 card.innerHTML = `
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <h3 class="font-extrabold text-base text-white uppercase tracking-wider">${anim.name}</h3>
-                        
-                        <div class="flex items-center gap-3">
-                            <div class="flex items-center gap-2 bg-[#181324] px-2.5 py-1.5 rounded-lg border border-[#2a203f] cursor-pointer" onclick="openColorModal(${anim.id})">
-                                <span class="text-[11px] font-bold text-gray-400">Color Sprite:</span>
-                                <div id="color-btn-preview-${anim.id}" class="w-5 h-5 rounded border border-white/20 shadow" style="background-color: ${anim.spriteColor};"></div>
-                            </div>
+                    <h3 class="anim-title">${anim.name}</h3>
+                    <canvas id="canvas-${anim.id}"></canvas>
+                `;
+                contenedor.appendChild(card);
+                reproducirAnimacion(anim.id, maxW, maxH);
+            });
 
-                            <div class="flex bg-[#261f36] rounded-lg overflow
+            document.getElementById('resultados').style.display = 'block';
+            document.getElementById('resultados').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function reproducirAnimacion(animId, maxW, maxH) {
+            const anim = activeAnimations.find(a => a.id === animId);
+            const canvas = document.getElementById(`canvas-${animId}`);
+            const ctx = canvas.getContext('2d');
+            
+            let scale = 1;
+            if (maxW > 300) scale = 300 / maxW; // Escalar si es muy grande para el cel
+            
+            canvas.width = maxW * scale; 
+            canvas.height = maxH * scale;
+            let frameActual = 0;
+
+            function loop() {
+                if (!anim.frames || anim.frames.length === 0) return;
+                
+                const frame = anim.frames[frameActual];
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const logicalW = frame.frameWidth || frame.width;
+                const logicalH = frame.frameHeight || frame.height;
+                const dx = frame.frameX < 0 ? Math.abs(frame.frameX) : 0;
+                const dy = frame.frameY < 0 ? Math.abs(frame.frameY) : 0;
+
+                ctx.save();
+                ctx.scale(scale, scale);
+                ctx.translate(maxW / 2, maxH / 2);
+                ctx.drawImage(imageElement, frame.x, frame.y, frame.width, frame.height, -logicalW/2 + dx, -logicalH/2 + dy, frame.width, frame.height);
+                ctx.restore();
+                
+                frameActual = (frameActual + 1) % anim.frames.length;
+                currentTimers[animId] = setTimeout(loop, 1000 / 24); // 24 FPS
+            }
+            loop();
+        }
+
+        // Crear y descargar el archivo ZIP
+        async function descargarZip() {
+            if (typeof JSZip === 'undefined') {
+                alert("Error: No se pudo cargar JSZip. Prueba desde el navegador (Chrome) y revisa tu internet.");
+                return;
+            }
+
+            try {
+                let totalWidth = 0; let totalHeight = 0; let rows = [];
+
+                activeAnimations.forEach(anim => {
+                    let rowWidth = 0; let rowHeight = 0;
+                    anim.frames.forEach(f => {
+                        rowWidth += f.width;
+                        if (f.height > rowHeight) rowHeight = f.height;
+                    });
+                    if (rowWidth > totalWidth) totalWidth = rowWidth;
+                    rows.push({ animName: anim.name, frames: anim.frames, yOffset: totalHeight, height: rowHeight });
+                    totalHeight += rowHeight;
+                });
+
+                if (totalWidth === 0) {
+                    alert("No hay imágenes para exportar.");
+                    return;
+                }
+
+                const outCanvas = document.createElement('canvas');
+                outCanvas.width = totalWidth; outCanvas.height = totalHeight;
+                const outCtx = outCanvas.getContext('2d');
+                
+                let newXmlString = `<?xml version="1.0" encoding="utf-8"?>\n<TextureAtlas imagePath="spritesheet.png">\n`;
+
+                rows.forEach(row => {
+                    let currentX = 0;
+                    row.frames.forEach((f, idx) => {
+                        outCtx.drawImage(imageElement, f.x, f.y, f.width, f.height, currentX, row.yOffset, f.width, f.height);
+                        const frameNum = String(idx).padStart(4, '0');
+                        newXmlString += `\t<SubTexture name="${row.animName}${frameNum}" x="${currentX}" y="${row.yOffset}" width="${f.width}" height="${f.height}" frameX="${f.frameX}" frameY="${f.frameY}" frameWidth="${f.frameWidth}" frameHeight="${f.frameHeight}"/>\n`;
+                        currentX += f.width;
+                    });
+                });
+                newXmlString += `</TextureAtlas>`;
+
+                const blob = await new Promise(resolve => outCanvas.toBlob(resolve, 'image/png'));
+                const zip = new JSZip();
+                zip.file("spritesheet.png", blob);
+                zip.file("spritesheet.xml", newXmlString);
+
+                const zipContent = await zip.generateAsync({type:"blob"});
+                const link = document.createElement('a'); 
+                link.href = URL.createObjectURL(zipContent); 
+                link.download = "FNF_Sprites_Modificados.zip"; 
+                link.click();
+            } catch (error) { 
+                alert("Error al generar el ZIP. Revisa la consola."); 
+            }
+        }
+    </script>
+</body>
+</html>
