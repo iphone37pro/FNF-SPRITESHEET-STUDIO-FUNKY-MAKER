@@ -390,6 +390,7 @@
                 ctx.rotate(rotacionGlobal * Math.PI / 180);
                 ctx.globalAlpha = opacidadGlobal;
 
+                // CORRECCIÓN CRUCIAL: Se restan fx y fy (en lugar de sumarlos) para restaurar el margen
                 const dx = -maxW / 2 + (maxW - fw) / 2 - fx;
                 const dy = -maxH / 2 + (maxH - fh) / 2 - fy;
 
@@ -454,6 +455,7 @@
                         outCtx.rotate(rotacionGlobal * Math.PI / 180);
                         outCtx.globalAlpha = opacidadGlobal;
 
+                        // CORRECCIÓN CRUCIAL: Se restan fx y fy también en el ZIP para garantizar simetría
                         const dx = -maxW / 2 + (maxW - fw) / 2 - fx;
                         const dy = -maxH / 2 + (maxH - fh) / 2 - fy;
 
