@@ -106,6 +106,44 @@
             border-radius: 5px;
             margin-top: 10px;
         }
+
+        /* Estilos del Boyfriend interactivo */
+        #bf-mascot {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: #31b0d1; /* Color Cyan de BF */
+            border: 4px solid #1a1a24;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 32px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+            z-index: 1000;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #bf-mascot:active {
+            transform: scale(0.8) translateY(5px);
+        }
+        #bf-mascot::after {
+            content: '🎵';
+            position: absolute;
+            top: -15px;
+            right: -10px;
+            font-size: 24px;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        #bf-mascot.singing::after {
+            opacity: 1;
+            transform: translateY(-15px);
+        }
     </style>
 </head>
 <body>
@@ -170,7 +208,51 @@
         <div id="listaAnimaciones"></div>
     </div>
 
+    <!-- Botón de Boyfriend Distracción -->
+    <div id="bf-mascot" onclick="playBfBeep()" title="Beep bop!">🧢</div>
+
     <script>
+        // --- CÓDIGO DEL SINTETIZADOR DE BOYFRIEND ---
+        let audioCtx;
+        function playBfBeep() {
+            // Inicializa el motor de audio solo cuando el usuario interactúa
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            // FNF usa ondas que suenan a retro/chiptune
+            const waveforms = ['square', 'sawtooth', 'triangle'];
+            osc.type = waveforms[Math.floor(Math.random() * waveforms.length)];
+            
+            // Frecuencias agudas (Notas de Boyfriend)
+            const freqs = [523.25, 587.33, 659.25, 698.46, 783.99, 880.00]; 
+            osc.frequency.setValueAtTime(freqs[Math.floor(Math.random() * freqs.length)], audioCtx.currentTime);
+            
+            // Hace que suene como un golpe rápido (Bop!)
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+
+            // Animación visual de la nota musical
+            const bf = document.getElementById('bf-mascot');
+            bf.classList.remove('singing');
+            void bf.offsetWidth; // Forzar reinicio de animación
+            bf.classList.add('singing');
+        }
+        // ---------------------------------------------
+
         const pngInput = document.getElementById('pngInput');
         const xmlInput = document.getElementById('xmlInput');
         const btnPng = document.getElementById('btnPng');
@@ -390,7 +472,6 @@
                 ctx.rotate(rotacionGlobal * Math.PI / 180);
                 ctx.globalAlpha = opacidadGlobal;
 
-                // CORRECCIÓN CRUCIAL: Se restan fx y fy (en lugar de sumarlos) para restaurar el margen
                 const dx = -maxW / 2 + (maxW - fw) / 2 - fx;
                 const dy = -maxH / 2 + (maxH - fh) / 2 - fy;
 
@@ -422,68 +503,4 @@
                 return;
             }
 
-            try {
-                const zip = new JSZip();
-
-                for (const anim of activeAnimations) {
-                    let maxW = 0;
-                    let maxH = 0;
-
-                    anim.frames.forEach(f => {
-                        const fw = f.frameWidth || f.width;
-                        const fh = f.frameHeight || f.height;
-                        if (fw > maxW) maxW = fw;
-                        if (fh > maxH) maxH = fh;
-                    });
-
-                    if (anim.frames.length === 0 || maxW === 0 || maxH === 0) continue;
-
-                    const outCanvas = document.createElement('canvas');
-                    outCanvas.width = maxW * anim.frames.length;
-                    outCanvas.height = maxH;
-                    const outCtx = outCanvas.getContext('2d');
-
-                    anim.frames.forEach((f, i) => {
-                        const fw = f.frameWidth || f.width;
-                        const fh = f.frameHeight || f.height;
-                        const fx = f.frameX || 0;
-                        const fy = f.frameY || 0;
-                        const slotX = i * maxW;
-
-                        outCtx.save();
-                        outCtx.translate(slotX + maxW / 2, maxH / 2);
-                        outCtx.rotate(rotacionGlobal * Math.PI / 180);
-                        outCtx.globalAlpha = opacidadGlobal;
-
-                        // CORRECCIÓN CRUCIAL: Se restan fx y fy también en el ZIP para garantizar simetría
-                        const dx = -maxW / 2 + (maxW - fw) / 2 - fx;
-                        const dy = -maxH / 2 + (maxH - fh) / 2 - fy;
-
-                        outCtx.drawImage(imageElement, f.x, f.y, f.width, f.height, dx, dy, f.width, f.height);
-                        
-                        if (usarTinte) {
-                            outCtx.globalCompositeOperation = 'source-atop';
-                            outCtx.fillStyle = colorGlobal;
-                            outCtx.fillRect(dx, dy, f.width, f.height);
-                            outCtx.globalCompositeOperation = 'source-over';
-                        }
-
-                        outCtx.restore();
-                    });
-
-                    const blob = await new Promise(resolve => outCanvas.toBlob(resolve, 'image/png'));
-                    zip.file(`${anim.name}.png`, blob);
-                }
-
-                const zipContent = await zip.generateAsync({type:"blob"});
-                const link = document.createElement('a'); 
-                link.href = URL.createObjectURL(zipContent); 
-                link.download = "FNF_Sprites_Modificados.zip"; 
-                link.click();
-            } catch (error) { 
-                alert("Error al generar el ZIP. Revisa la consola."); 
-            }
-        }
-    </script>
-</body>
-</html>
+        
