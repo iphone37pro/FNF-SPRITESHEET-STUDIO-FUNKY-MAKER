@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FNF Spritesheet Studio</title>
+    <!-- Librería necesaria para crear el archivo ZIP -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body { 
@@ -105,44 +106,6 @@
             border-radius: 5px;
             margin-top: 10px;
         }
-
-        /* Estilos del Boyfriend interactivo */
-        #bf-mascot {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            background-color: #31b0d1; 
-            border: 4px solid #1a1a24;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 32px;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            transition: transform 0.1s;
-            z-index: 1000;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent; 
-        }
-        #bf-mascot:active {
-            transform: scale(0.8) translateY(5px);
-        }
-        #bf-mascot::after {
-            content: '🎵';
-            position: absolute;
-            top: -15px;
-            right: -10px;
-            font-size: 24px;
-            opacity: 0;
-            transition: opacity 0.2s, transform 0.2s;
-        }
-        #bf-mascot.singing::after {
-            opacity: 1;
-            transform: translateY(-15px);
-        }
     </style>
 </head>
 <body>
@@ -152,13 +115,13 @@
 
     <div class="card">
         <h3 style="margin-top:0;">PNG</h3>
-        <button id="btnPng" onclick="resetAndClick('pngInput')">Seleccionar PNG</button>
+        <button id="btnPng" onclick="document.getElementById('pngInput').click()">Seleccionar PNG</button>
         <input type="file" id="pngInput" accept="image/png">
     </div>
 
     <div class="card">
         <h3 style="margin-top:0;">XML</h3>
-        <button id="btnXml" onclick="resetAndClick('xmlInput')">Seleccionar XML</button>
+        <button id="btnXml" onclick="document.getElementById('xmlInput').click()">Seleccionar XML</button>
         <input type="file" id="xmlInput" accept=".xml">
     </div>
 
@@ -207,57 +170,7 @@
         <div id="listaAnimaciones"></div>
     </div>
 
-    <!-- Regresamos al onclick estándar, es el más confiable en Android para audio -->
-    <div id="bf-mascot" onclick="playBfBeep()" title="Beep bop!">🧢</div>
-
     <script>
-        // Función segura para resetear el input antes de abrirlo (Soluciona el problema de Android)
-        function resetAndClick(inputId) {
-            const input = document.getElementById(inputId);
-            input.value = ''; // Limpiamos primero
-            input.click();    // Abrimos después
-        }
-
-        // --- SINTETIZADOR DE BOYFRIEND MEJORADO ---
-        let audioCtx;
-        function playBfBeep() {
-            try {
-                if (!audioCtx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContext();
-                }
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-
-                const osc = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                
-                const waveforms = ['square', 'sawtooth', 'triangle'];
-                osc.type = waveforms[Math.floor(Math.random() * waveforms.length)];
-                
-                const freqs = [523.25, 587.33, 659.25, 698.46, 783.99, 880.00]; 
-                osc.frequency.value = freqs[Math.floor(Math.random() * freqs.length)];
-                
-                gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime); 
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-                
-                osc.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.2);
-
-                const bf = document.getElementById('bf-mascot');
-                bf.classList.remove('singing');
-                void bf.offsetWidth; 
-                bf.classList.add('singing');
-            } catch (e) {
-                console.error("No se pudo reproducir el sonido:", e);
-            }
-        }
-        // -------------------------------------------------------
-
         const pngInput = document.getElementById('pngInput');
         const xmlInput = document.getElementById('xmlInput');
         const btnPng = document.getElementById('btnPng');
@@ -504,4 +417,72 @@
 
         async function descargarZip() {
             if (typeof JSZip === 'undefined') {
-                alert("Error: No se pudo cargar JSZip. Prueba desde
+                alert("Error: No se pudo cargar JSZip. Prueba desde el navegador (Chrome) y revisa tu internet.");
+                return;
+            }
+
+            try {
+                const zip = new JSZip();
+
+                for (const anim of activeAnimations) {
+                    let maxW = 0;
+                    let maxH = 0;
+
+                    anim.frames.forEach(f => {
+                        const fw = f.frameWidth || f.width;
+                        const fh = f.frameHeight || f.height;
+                        if (fw > maxW) maxW = fw;
+                        if (fh > maxH) maxH = fh;
+                    });
+
+                    if (anim.frames.length === 0 || maxW === 0 || maxH === 0) continue;
+
+                    const outCanvas = document.createElement('canvas');
+                    outCanvas.width = maxW * anim.frames.length;
+                    outCanvas.height = maxH;
+                    const outCtx = outCanvas.getContext('2d');
+
+                    anim.frames.forEach((f, i) => {
+                        const fw = f.frameWidth || f.width;
+                        const fh = f.frameHeight || f.height;
+                        const fx = f.frameX || 0;
+                        const fy = f.frameY || 0;
+                        const slotX = i * maxW;
+
+                        outCtx.save();
+                        outCtx.translate(slotX + maxW / 2, maxH / 2);
+                        outCtx.rotate(rotacionGlobal * Math.PI / 180);
+                        outCtx.globalAlpha = opacidadGlobal;
+
+                        const dx = -maxW / 2 + (maxW - fw) / 2 - fx;
+                        const dy = -maxH / 2 + (maxH - fh) / 2 - fy;
+
+                        outCtx.drawImage(imageElement, f.x, f.y, f.width, f.height, dx, dy, f.width, f.height);
+                        
+                        if (usarTinte) {
+                            outCtx.globalCompositeOperation = 'source-atop';
+                            outCtx.fillStyle = colorGlobal;
+                            outCtx.fillRect(dx, dy, f.width, f.height);
+                            outCtx.globalCompositeOperation = 'source-over';
+                        }
+
+                        outCtx.restore();
+                    });
+
+                    const blob = await new Promise(resolve => outCanvas.toBlob(resolve, 'image/png'));
+                    zip.file(`${anim.name}.png`, blob);
+                }
+
+                const zipContent = await zip.generateAsync({type:"blob"});
+                const link = document.createElement('a'); 
+                link.href = URL.createObjectURL(zipContent); 
+                link.download = "FNF_Sprites_Modificados.zip"; 
+                link.click();
+            } catch (error) { 
+                alert("Error al generar el ZIP. Revisa la consola."); 
+            }
+        }
+    </script>
+</body>
+    </html>
+    
